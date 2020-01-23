@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 8b7fddbd5a4735a49aad6b3af9c15b48
+timeCreated: 1574009870
+licenseType: Free
+MonoImporter:
+  serializedVersion: 2
+  defaultReferences:
+  - snakePrefab: {fileID: 1000014224559362, guid: 0853c01cb317b0f408204618580ee1bc,
+      type: 2}
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
