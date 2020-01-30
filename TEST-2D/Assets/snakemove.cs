@@ -15,6 +15,6 @@ public class snakemove : MonoBehaviour {
 
     void OnCollisionEnter2D(Collision2D coll)
     {
-        Debug.Log("We hit something, captain!");
+        //Debug.Log("We hit something, captain!");
     }
 }
