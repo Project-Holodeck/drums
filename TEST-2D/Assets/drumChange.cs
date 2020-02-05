@@ -14,30 +14,16 @@ public class drumChange : MonoBehaviour {
         sr = GetComponent<SpriteRenderer>();
 
     }
-	
-	// Update is called once per frame
-	void Update () {
-        //    this.transform.Translate(new Vector3(0, 10 * Time.deltaTime, 0));
-    this.gameObject.AddComponent<BoxCollider2D>();
-        sr.color = Color.Lerp(sr.color, Color.white, Time.deltaTime / 0.25f); // slowly linear interpolate. takes about 3 seconds to return to white
-        if (hit)
-        {
-            GetComponent<SpriteRenderer>().color = new Color(0f, 1f, 0f);
-        }
-    }
 
-    void OnCollisionEnter2D(Collision2D coll)
+    // Update is called once per frame
+    void Update()
     {
+        //    this.transform.Translate(new Vector3(0, 10 * Time.deltaTime, 0));
+        sr.color = Color.Lerp(sr.color, Color.white, Time.deltaTime / 0.25f); // slowly linear interpolate. takes about 3 seconds to return to white
 
-        //Destroy(gameObject);
-        Destroy(coll.gameObject);
-
+        if (((Vector4) (sr.color - Color.white)).magnitude <= 0.4 && hit)
         {
-            GetComponent<SpriteRenderer>().color = new Color(1f, 0f, 0f);
+            sr.color = Color.red;
         }
-        // want object to "glow" when hit, replacing drum temporarily with "test" sprite
-        // line below does not work
-        //this.gameObject.GetComponent<SpriteRenderer>().sprite = test;
     }
-
 }

@@ -5,11 +5,11 @@ using CodeMonkey;
 using CodeMonkey.Utils;
 
 public class GameHandler : MonoBehaviour {
-    private static float[] COL_POSITION = { -16.66f, -4.6f, 6.2f, 17.5f };
 
     public GameObject snakePrefab;
     public GameObject[] drums;
     private drumChange[] drumChanges;
+    private float[] drumPositions;
     public SerialPort serial;
 
     // Use this for initialization
@@ -22,10 +22,13 @@ public class GameHandler : MonoBehaviour {
         serial.Open();
 
         drumChanges = new drumChange[4];
+        drumPositions = new float[4];
         for (int i = 0; i < drums.Length; i++)
         {
             drumChanges[i] = drums[i].GetComponent<drumChange>();
+            drumPositions[i] = drums[i].transform.position.x;
         }
+
     }
 
     // Update is called once per frame
@@ -45,12 +48,6 @@ public class GameHandler : MonoBehaviour {
 
             if (((drumstate >> 3) & 7) == 0) leftstick = (byte) ((newdrumstate >> 3) & 7);
             if ((drumstate & 7) == 0) rightstick = (byte)(newdrumstate & 7);
-
-            if (leftstick > 0 || rightstick > 0)
-            {
-                Debug.Log(leftstick);
-                Debug.Log(rightstick);
-            }
 
             drumChanges[3].hit = (leftstick == 1) || (rightstick == 1);
             drumChanges[2].hit = (leftstick == 3) || (rightstick == 3);
@@ -75,7 +72,8 @@ public class GameHandler : MonoBehaviour {
 
     void createSnake(int col)
     {
-        GameObject body = (GameObject)Instantiate(snakePrefab, new Vector3(COL_POSITION[col], -30f, 0), Quaternion.identity);
-        body.GetComponent<Rigidbody2D>().velocity = new Vector2(0, Random.Range(10, 15));
+        GameObject body = (GameObject)Instantiate(snakePrefab, new Vector3(drumPositions[col], -30f, 0), Quaternion.identity);
+        body.GetComponent<snakemove>().drum = drums[col];
+        body.GetComponent<Rigidbody2D>().velocity = new Vector2(0, Random.Range(15, 20));
     }
 }
