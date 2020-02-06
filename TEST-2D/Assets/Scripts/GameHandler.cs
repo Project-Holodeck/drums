@@ -3,6 +3,8 @@ using System.Collections;
 using System.IO.Ports;
 using CodeMonkey;
 using CodeMonkey.Utils;
+using MidiParser;
+using Scheduler;
 
 public class GameHandler : MonoBehaviour {
 
@@ -11,10 +13,34 @@ public class GameHandler : MonoBehaviour {
     private drumChange[] drumChanges;
     private float[] drumPositions;
     public SerialPort serial;
+    private list<DrumEvent> schedule;
 
     // Use this for initialization
     void Start () {
         Debug.Log("GameHandler.Start");
+        var midiFile = new MidiFile("song.mid");
+
+        foreach (var track in midiFile.Tracks) {
+            foreach (var midiEvent in track.MidiEvents) {
+                if (midiEvent.Channel == 10) {
+                    if (midiEvent.MidiEventType == "NoteOn") {
+                        if (midiEvent.Arg2 == 36) {
+                            DrumEvent newDrumEvent = new DrumEvent(midiEvent.Time, 0)
+                        }
+                        else if (midiEvent.Arg2 == 40) {
+                            DrumEvent newDrumEvent = new DrumEvent(midiEvent.Time, 1)
+                        }
+                        else if (midiEvent.Arg2 == 42) {
+                            DrumEvent newDrumEvent = new DrumEvent(midiEvent.Time, 2)
+                        }
+                        else {
+                            DrumEvent newDrumEvent = new DrumEvent(midiEvent.Time, 3)
+                        }
+                        schedule.Add(newDrumEvent);
+                    }
+                }
+            }
+        }
 
         serial = new SerialPort();
         serial.PortName = "COM3";
@@ -33,6 +59,7 @@ public class GameHandler : MonoBehaviour {
 
     // Update is called once per frame
     int counter = 0;
+    int scheduleCount;
     byte drumstate = 0;
 
     void Update()
@@ -58,22 +85,32 @@ public class GameHandler : MonoBehaviour {
         } catch (System.FormatException e)
         {
         }
-        counter++;
+        
 
-        if (counter == 60 * 2)
+        if (counter == schedule[scheduleCount].Time)
         {
-            counter = 0;
-            for (int i = 0; i < 4; i++)
-            {
-                createSnake(i);
-            }
+            
+            
+                createSnake(schedule[scheduleCount].drum);
+                if (scheduleCount+1 < schedule.Count) {
+                    while (schedule[scheduleCount].time == schedule[scheduleCount+1].time) {
+                        scheduleCount++;
+                        createSnake(schedule[scheduleCount].drum);
+                        if (scheduleCount+1 >= schedule.Count) {
+                            break;
+                        }
+                    }
+                }
+                
+            
         }
+        counter++;
     }
 
     void createSnake(int col)
     {
         GameObject body = (GameObject)Instantiate(snakePrefab, new Vector3(drumPositions[col], -30f, 0), Quaternion.identity);
         body.GetComponent<snakemove>().drum = drums[col];
-        body.GetComponent<Rigidbody2D>().velocity = new Vector2(0, Random.Range(15, 20));
+        body.GetComponent<Rigidbody2D>().velocity = new Vector2(0, 20);
     }
 }
