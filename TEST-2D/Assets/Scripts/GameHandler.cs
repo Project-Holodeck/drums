@@ -1,8 +1,7 @@
 ﻿using UnityEngine;
 using System.Collections;
+using System.Collections.Generic;
 using System.IO.Ports;
-using CodeMonkey;
-using CodeMonkey.Utils;
 using MidiParser;
 using Scheduler;
 
@@ -13,38 +12,29 @@ public class GameHandler : MonoBehaviour {
     private drumChange[] drumChanges;
     private float[] drumPositions;
     public SerialPort serial;
-    private list<DrumEvent> schedule;
+    private List<DrumEvent> schedule = new List<DrumEvent>();
+    
+    int scheduleCount = 0;
+    byte drumstate = 0;
+    bool stillList = true;
 
     // Use this for initialization
     void Start () {
         Debug.Log("GameHandler.Start");
-        var midiFile = new MidiFile("song.mid");
 
-        foreach (var track in midiFile.Tracks) {
-            foreach (var midiEvent in track.MidiEvents) {
-                if (midiEvent.Channel == 10) {
-                    if (midiEvent.MidiEventType == "NoteOn") {
-                        if (midiEvent.Arg2 == 36) {
-                            DrumEvent newDrumEvent = new DrumEvent(midiEvent.Time, 0)
-                        }
-                        else if (midiEvent.Arg2 == 40) {
-                            DrumEvent newDrumEvent = new DrumEvent(midiEvent.Time, 1)
-                        }
-                        else if (midiEvent.Arg2 == 42) {
-                            DrumEvent newDrumEvent = new DrumEvent(midiEvent.Time, 2)
-                        }
-                        else {
-                            DrumEvent newDrumEvent = new DrumEvent(midiEvent.Time, 3)
-                        }
-                        schedule.Add(newDrumEvent);
-                    }
-                }
-            }
-        }
+        string songNameNoExt = "test";
+
+        // check for xml
+        //if songNameNoExt + @".xml" exists in folder
+        //  LoadSchedule
+        //else
+        PrepareSchedule(songNameNoExt + @".mid");
+        //  SaveSchedule
 
         serial = new SerialPort();
         serial.PortName = "COM3";
         serial.BaudRate = 9600;
+        serial.ReadTimeout = 100;
         serial.Open();
 
         drumChanges = new drumChange[4];
@@ -57,11 +47,73 @@ public class GameHandler : MonoBehaviour {
 
     }
 
-    // Update is called once per frame
-    int counter = 0;
-    int scheduleCount;
-    byte drumstate = 0;
+    void PrepareSchedule(string songName)
+    {
+        // Use external library to load midi file
+        var midiFile = new MidiFile(songName);
+        byte currTempo = 42;
 
+        double ticksPerSecond = midiFile.TicksPerQuarterNote * currTempo / 60.0;
+        int lastEventTime;
+        
+        double accumulatedTime;
+
+        // For each track in midi
+        foreach (var track in midiFile.Tracks)
+        {
+            lastEventTime = 0;
+            accumulatedTime = 0;
+
+            // For each sound event
+            foreach (var midiEvent in track.MidiEvents)
+            {
+                // Channel 10 is drum
+                if (midiEvent.MidiEventType == MidiEventType.NoteOn && midiEvent.Channel == 10)
+                {
+                    // Create new drum event
+                    DrumEvent newDrumEvent;
+
+                    accumulatedTime += (midiEvent.Time - lastEventTime) / ticksPerSecond;
+                    
+                    Debug.Log(midiEvent.Time);
+                    lastEventTime = midiEvent.Time;
+
+                    double drumTime = accumulatedTime;
+
+                    // Assign drumpad based on drum type
+                    switch (midiEvent.Arg2)
+                    {
+                        case 36:
+                            newDrumEvent = new DrumEvent(drumTime, 0);
+                            break;
+                        case 40:
+                            newDrumEvent = new DrumEvent(drumTime, 1);
+                            break;
+                        case 42:
+                            newDrumEvent = new DrumEvent(drumTime, 2);
+                            break;
+                        default:
+                            newDrumEvent = new DrumEvent(drumTime, 3);
+                            break;
+                    }
+
+                    // Add to schedule
+                    schedule.Add(newDrumEvent);
+                }
+                else if (midiEvent.MidiEventType == MidiEventType.MetaEvent && midiEvent.Arg1 == 0x51)
+                {
+                    ticksPerSecond = midiFile.TicksPerQuarterNote* currTempo / 60.0;
+                    accumulatedTime += (midiEvent.Time - lastEventTime) / ticksPerSecond;
+                    lastEventTime = midiEvent.Time;
+                    currTempo = midiEvent.Arg2;
+                }
+            }
+        }
+
+        schedule.Sort();
+    }
+
+    // Update is called once per frame
     void Update()
     {
         try
@@ -85,26 +137,20 @@ public class GameHandler : MonoBehaviour {
         } catch (System.FormatException e)
         {
         }
-        
 
-        if (counter == schedule[scheduleCount].Time)
+        //Debug.Log(scheduleCount + ": " + schedule[scheduleCount].time + ":" + Time.time);
+        
+        // Check that it's the right time for the next drum event
+        while (stillList && Time.time >= schedule[scheduleCount].time)
         {
-            
-            
-                createSnake(schedule[scheduleCount].drum);
-                if (scheduleCount+1 < schedule.Count) {
-                    while (schedule[scheduleCount].time == schedule[scheduleCount+1].time) {
-                        scheduleCount++;
-                        createSnake(schedule[scheduleCount].drum);
-                        if (scheduleCount+1 >= schedule.Count) {
-                            break;
-                        }
-                    }
-                }
-                
-            
+            createSnake(schedule[scheduleCount].drum);
+            scheduleCount++;
+            if (scheduleCount >= schedule.Count)
+            {
+                stillList = false;
+                break;
+            }
         }
-        counter++;
     }
 
     void createSnake(int col)
